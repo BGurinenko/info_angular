@@ -1,3 +1,9 @@
+import {COMMA, ENTER} from '@angular/cdk/keycodes';
+import {FormControl} from '@angular/forms';
+import {MatAutocompleteSelectedEvent} from '@angular/material/autocomplete';
+import {MatChipInputEvent} from '@angular/material/chips';
+import {Observable} from 'rxjs';
+import {map, startWith} from 'rxjs/operators';
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { SubOrder } from '../models/sub-order';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -50,7 +56,7 @@ export class OrderComponent implements OnInit {
   confirmClicked = false;
   belpostData: BelpostData;
 
-  orderBodyAnsw: OrderBodyAnsw = new OrderBodyAnsw('', '', '', false, '', new ClientInfo('', '', ''), [new OrderBody('', '', '', '', '0', '0', '0', false, '', '', '')]);
+  orderBodyAnsw: OrderBodyAnsw = new OrderBodyAnsw('', '', '', false, '', new ClientInfo('', '', ''), [new OrderBody('', '', '', '', '0', '0', '0', false, '', '', '')], []);
   countReadyСhange: number;
   belPostAnsw: BelPostAnsw = null;
   splitElement = ';';
@@ -58,6 +64,18 @@ export class OrderComponent implements OnInit {
   messageNoConnect = 'Нет соединения, попробуйте позже.';
   action = 'Ok';
   styleNoConnect = 'red-snackbar';
+
+  /* FRUIT */
+  selectable = true;
+  removable = true;
+  separatorKeysCodes: number[] = [ENTER, COMMA];
+  fruitCtrl = new FormControl();
+  filteredFruits: Observable<string[]>;
+  fruits: string[] = [];
+  allFruits: string[] = [' 01Bepx',' 01Hu3',' 02Bepx',' 03Bepx',' 04Bepx',' 05Hu3',' colona1',' D03Bepx',' Poddon',' Telezka','A0','A00','A001','A002','A003','A004','A005','A006','A008','A009','A010','A029','A030','A031','A032','A033','A034','B001'];
+
+  @ViewChild('fruitInput') fruitInput: ElementRef<HTMLInputElement>;
+  /* */
 
   constructor(
     public dialog: MatDialog,
@@ -69,17 +87,60 @@ export class OrderComponent implements OnInit {
     private snackbarService: SnackbarService,
   ) {
     this.orderId = route.snapshot.params['id'];
+
+    this.filteredFruits = this.fruitCtrl.valueChanges.pipe(
+      startWith(null),
+      map((fruit: string | null) => (fruit ? this._filter(fruit) : this.allFruits.slice())),
+    );
    }
 
+  /* */
+  add(event: MatChipInputEvent): void {
+    const value = (event.value || '').trim();
+
+    // Add our fruit
+    if (value) {
+      this.fruits.push(value);
+    }
+
+    // Clear the input value
+    this.fruitInput.nativeElement.value = "";
+    this.fruitCtrl.setValue(null);
+    this.isDataChanged = true;
+  }
+
+  remove(fruit: string): void {
+    const index = this.fruits.indexOf(fruit);
+
+    if (index >= 0) {
+      this.fruits.splice(index, 1);
+    }
+    this.isDataChanged = true;
+  }
+
+  selected(event: MatAutocompleteSelectedEvent): void {
+    this.fruits.push(event.option.viewValue);
+    this.fruitInput.nativeElement.value = '';
+    this.fruitCtrl.setValue(null);
+    this.isDataChanged = true;
+  }
+
+  private _filter(value: string): string[] {
+    const filterValue = value.toLowerCase();
+
+    return this.allFruits.filter(fruit => fruit.toLowerCase().includes(filterValue));
+  }
+  /**/
+
   ngOnInit(): void {
-    this.titleService.setTitle(this.titleService.getTitle() + ' №' + this.orderId); 
+    this.titleService.setTitle(this.titleService.getTitle() + ' №' + this.orderId);
     let orderBodyReq = new OrderBodyReq(this.tokenService.getToken(), this.orderId)
     this.orderService.getSuborder(orderBodyReq).subscribe(response => {
       if(response) {
         this.getData(response);
       }
     },
-    error => { 
+    error => {
       console.log(error);
     });
   }
@@ -116,13 +177,13 @@ export class OrderComponent implements OnInit {
             this.getData(response);
           }
         },
-        error => { 
+        error => {
           console.log(error);
         });
-      } 
+      }
       else this.snackbarService.openSnackBar('Операция не выполнена', this.action, this.styleNoConnect);
     },
-    error => { 
+    error => {
       console.log(error);
       this.snackbarService.openSnackBar(this.messageNoConnect, this.action, this.styleNoConnect);
     });
@@ -130,6 +191,7 @@ export class OrderComponent implements OnInit {
 
   getData(response: OrderBodyAnsw) {
     this.orderBodyAnsw = response;
+    this.fruits = response.place;
     this.client = this.orderBodyAnsw.aboutClient;
     this.dataSource = this.orderBodyAnsw.body;
     this.getBelpostBarcodes(this.orderBodyAnsw.postCode);
@@ -151,7 +213,7 @@ export class OrderComponent implements OnInit {
         element.count_g = element.count_e;
       if(!element.count_g)
         element.count_g = '0';
-    } 
+    }
   }
 
   onFocusout(element) {
@@ -182,6 +244,8 @@ export class OrderComponent implements OnInit {
       delete element.changed;
     });
 
+    this.orderBodyAnsw.place = this.fruits;
+
     let order = new Changer(this.tokenService.getToken(), this.orderBodyAnsw);
 
     this.orderService.orderSaveChange(order).subscribe(response => {
@@ -192,7 +256,7 @@ export class OrderComponent implements OnInit {
         this.snackbarService.openSnackBar('Перезагрузите страницу', this.action);
       }
     },
-    error => { 
+    error => {
       console.log(error);
       this.snackbarService.openSnackBar(this.messageNoConnect, this.action, this.styleNoConnect);
     });
@@ -210,11 +274,11 @@ export class OrderComponent implements OnInit {
     });
     dialogRef.afterClosed().subscribe(result => {
       if(result >= 1 && result <= 4) {
-        let belPostReq = new BelPostReq(this.tokenService.getToken(), this.orderBodyAnsw.sub_num, result) 
+        let belPostReq = new BelPostReq(this.tokenService.getToken(), this.orderBodyAnsw.sub_num, result)
         this.orderService.getBarcode(belPostReq).subscribe(response => {
           if(response) {
             this.belPostAnsw = response;
-            let t = timer(0, 100).subscribe(vl => { 
+            let t = timer(0, 100).subscribe(vl => {
               console.log(vl);
               if(vl >= 10) {
                 this.barcodePrint._elementRef.nativeElement.click();
@@ -225,14 +289,14 @@ export class OrderComponent implements OnInit {
                     this.getData(response);
                   }
                 },
-                error => { 
+                error => {
                   console.log(error);
                 });
               }
             });
           }
         },
-        error => { 
+        error => {
           console.log(error);
         });
       }

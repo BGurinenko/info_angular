@@ -30,7 +30,7 @@ mat-form-field {
 }
 button#save {
     margin: 0.5em;
-    float: right; 
+    float: right;
 }
 #store {
     color: rgb(194, 216, 245);
@@ -58,22 +58,25 @@ img {
 //     border-radius: 10px;
 // }
 .container {
-    position: relative; 
+    position: relative;
 }
 .container:hover {
     cursor: pointer;
 }
-.container img { 
-    display: block; 
+.container img {
+    display: block;
 }
-.container .icon-close { 
-    position: absolute; 
-    top: -13px; 
-    right: -13px; 
+.container .icon-close {
+    position: absolute;
+    top: -13px;
+    right: -13px;
 }
 button#bt-delete {
     color: rgba(146, 146, 146, 0.75);
 }
 button#bt-delete:hover {
     color: rgba(176, 89, 202, 0.75);;
+}
+.example-chip-list {
+  width: 100%;
 }

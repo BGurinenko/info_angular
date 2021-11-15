@@ -10,5 +10,6 @@ export class OrderBodyAnsw{
         public postCode: string,
         public aboutClient: ClientInfo,
         public body: Array<OrderBody>,
+        public place: string[],
     ){}
 }
